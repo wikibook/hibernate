@@ -1,0 +1,95 @@
+<project name="Hello World Reverse" default="compile" basedir=".">
+
+    <!-- Name of project and version -->
+    <property name="proj.name"      value="Hello World Reverse"/>
+    <property name="proj.shortname" value="helloworld-reverse"/>
+    <property name="version"        value="1.0"/>
+
+    <!-- Global properties for this build -->
+    <property name="database.dir"           value="database"/>
+    <property name="src.java.dir"           value="src/java"/>
+    <property name="lib.dir"                value="lib"/>
+
+    <!-- Classpath declaration -->
+    <path id="project.classpath">
+        <fileset dir="${lib.dir}">
+            <include name="**/*.jar"/>
+            <include name="**/*.zip"/>
+        </fileset>
+    </path>
+
+    <!-- Useful shortcuts -->
+    <patternset id="meta.files">
+        <include name="**/*.xml"/>
+        <include name="**/*.properties"/>
+    </patternset>
+
+    <!-- Clean up -->
+    <target name="clean" description="Clean the source directory">
+        <delete dir="${src.java.dir}"/>
+        <mkdir dir="${src.java.dir}"/>
+    </target>
+
+    <!-- Start the HSQL DB browser tool -->
+    <target name="dbmanager" description="Start HSQL DB manager">
+        <java
+            classname="org.hsqldb.util.DatabaseManagerSwing"
+            fork="yes"
+            classpathref="project.classpath"
+            failonerror="true">
+            <arg value="-url"/>
+            <arg value="jdbc:hsqldb:hsql://localhost/"/>
+            <arg value="-driver"/>
+            <arg value="org.hsqldb.jdbcDriver"/>
+        </java>
+    </target>
+
+    <!-- Enable the HibernateToolTask -->
+    <taskdef name="hibernatetool"
+             classname="org.hibernate.tool.ant.HibernateToolTask"
+             classpathref="project.classpath"/>
+
+    <!-- Generate XML metadata mappig files from database schema -->
+    <target name="reveng.hbmxml"
+            description="Read database, generate XML mapping files">
+
+        <hibernatetool destdir="${src.java.dir}">
+            <jdbcconfiguration
+                propertyfile="${basedir}/helloworld.db.properties"
+                revengfile="${basedir}/helloworld.reveng.xml"/>
+            <hbm2hbmxml/>
+            <hbm2cfgxml/>
+        </hibernatetool>
+
+    </target>
+
+    <!-- Generate Java persistent classes from XML mapping files -->
+    <target name="reveng.pojos"
+            description="Read XML mapping files, generate POJOs">
+
+        <hibernatetool destdir="${src.java.dir}">
+            <configuration>
+                <fileset dir="${src.java.dir}">
+                    <include name="**/*.hbm.xml"/>
+                </fileset>
+            </configuration>
+            <hbm2java/> <!-- Generate POJO source -->
+        </hibernatetool>
+
+    </target>
+
+    <!-- Generate annotated Java entity beans from database schema -->
+    <target name="reveng.entities"
+            description="Read database, generate Java entity beans">
+
+        <hibernatetool destdir="${src.java.dir}">
+            <jdbcconfiguration
+                propertyfile="${basedir}/helloworld.db.properties"
+                revengfile="${basedir}/helloworld.reveng.xml"/>
+            <hbm2java jdk5="true" ejb3="true"/>
+            <hbm2cfgxml ejb3="true"/>
+        </hibernatetool>
+
+    </target>
+
+</project>

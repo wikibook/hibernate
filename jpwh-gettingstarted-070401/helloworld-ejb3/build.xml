@@ -1,0 +1,95 @@
+<project name="Hello World with EJB3" default="compile" basedir=".">
+
+    <!-- Name of project and version -->
+    <property name="proj.name"      value="Hello World with EJB3"/>
+    <property name="proj.shortname" value="helloworld-ejb3"/>
+    <property name="version"        value="1.0"/>
+
+    <!-- Global properties for this build -->
+    <property name="database.dir"           value="database"/>
+    <property name="src.java.dir"           value="src/java"/>
+    <property name="src.etc.dir"            value="src/etc"/>
+    <property name="lib.dir"                value="lib"/>
+    <property name="build.dir"              value="build"/>
+
+    <!-- Classpath declaration -->
+    <path id="project.classpath">
+        <fileset dir="${lib.dir}">
+            <include name="**/*.jar"/>
+            <include name="**/*.zip"/>
+        </fileset>
+    </path>
+
+    <!-- Useful shortcuts -->
+    <patternset id="meta.files">
+        <include name="**/*.xml"/>
+        <include name="**/*.properties"/>
+    </patternset>
+
+    <!-- Clean up -->
+    <target name="clean" description="Clean the build directory">
+        <delete dir="${build.dir}"/>
+        <mkdir dir="${build.dir}"/>
+    </target>
+
+    <!-- Compile Java source -->
+    <target name="compile">
+        <mkdir dir="${build.dir}"/>
+        <javac srcdir="${src.java.dir}"
+               destdir="${build.dir}"
+               classpathref="project.classpath"/>
+    </target>
+
+    <!-- Copy metadata to build classpath -->
+    <target name="copymetafiles">
+        <mkdir dir="${build.dir}"/>
+        <copy todir="${build.dir}">
+            <fileset dir="${src.java.dir}">
+                <patternset refid="meta.files"/>
+            </fileset>
+        </copy>
+        <copy todir="${build.dir}">
+            <fileset dir="${src.etc.dir}">
+                <patternset refid="meta.files"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <!-- Run HelloWorld -->
+    <target name="run" depends="compile, copymetafiles"
+        description="Build and run HelloWorld">
+        <java fork="true"
+              classname="hello.HelloWorld"
+              classpathref="project.classpath">
+            <classpath path="${build.dir}"/>
+        </java>
+    </target>
+
+    <!-- Start the HSQL DB server -->
+    <target name="startdb" description="Run HSQL database server with clean DB">
+        <!-- Delete database files -->
+        <delete dir="${database.dir}"/>
+        <java classname="org.hsqldb.Server"
+              fork="yes"
+              classpathref="project.classpath"
+              failonerror="true">
+            <arg value="-database.0"/>
+            <arg value="file:${database.dir}/db"/>
+        </java>
+    </target>
+
+    <!-- Start the HSQL DB browser tool -->
+    <target name="dbmanager" description="Start HSQL DB manager">
+        <java
+            classname="org.hsqldb.util.DatabaseManagerSwing"
+            fork="yes"
+            classpathref="project.classpath"
+            failonerror="true">
+            <arg value="-url"/>
+            <arg value="jdbc:hsqldb:hsql://localhost/"/>
+            <arg value="-driver"/>
+            <arg value="org.hsqldb.jdbcDriver"/>
+        </java>
+    </target>
+
+</project>

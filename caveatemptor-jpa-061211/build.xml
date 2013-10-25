@@ -1,0 +1,136 @@
+<project name="CaveatEmptor JPA" default="test.integration" basedir=".">
+
+    <!-- Name of project and version -->
+    <property name="proj.name"      value="CaveatEmptor JPA"/>
+    <property name="proj.shortname" value="caveatemptor-jpa"/>
+    <property name="version"        value="20061110"/>
+
+    <!-- Global properties for this build -->
+    <property name="database.dir"           location="database"/>
+    <property name="src.java.dir"           location="src/java"/>
+    <property name="src.etc.dir"            location="src/etc"/>
+    <property name="src.conf.dir"           location="src/etc/conf"/>
+    <property name="lib.dir"                location="lib"/>
+    <property name="build.dir"              location="build"/>
+    <property name="build.classes.dir"      location="${build.dir}/classes"/>
+
+    <!-- Classpath declaration -->
+    <path id="project.classpath">
+        <fileset dir="${lib.dir}">
+            <include name="**/*.jar"/>
+            <include name="**/*.zip"/>
+        </fileset>
+    </path>
+
+    <!-- Useful shortcuts -->
+    <patternset id="meta.files">
+        <include name="**/*.xml"/>
+        <include name="**/*.properties"/>
+        <include name="**/*.dtd"/>
+        <include name="**/*.sql"/>
+    </patternset>
+
+    <!-- Clean up -->
+    <target name="clean" description="Clean the build directory">
+        <delete dir="${build.dir}"/>
+        <mkdir dir="${build.dir}"/>
+    </target>
+
+    <!-- Compile Java source -->
+    <target name="compile">
+        <mkdir dir="${build.classes.dir}"/>
+        <javac srcdir="${src.java.dir}"
+               destdir="${build.classes.dir}"
+               classpathref="project.classpath"/>
+    </target>
+
+    <!-- Copy metadata to build classpath -->
+    <target name="copymetafiles">
+        <mkdir dir="${build.classes.dir}"/>
+        <copy todir="${build.classes.dir}">
+            <fileset dir="${src.java.dir}">
+                <patternset refid="meta.files"/>
+            </fileset>
+        </copy>
+        <copy todir="${build.classes.dir}">
+            <fileset dir="${src.conf.dir}">
+                <patternset refid="meta.files"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <!-- ################ TestNG ###################### -->
+
+    <property name="test.output.dir" location="${build.dir}/test-output"/>
+
+    <taskdef resource="testngtasks" classpathref="project.classpath"/>
+
+    <target name="test.integration" depends="compile, copymetafiles" description="Run the integration tests">
+
+        <delete dir="${test.output.dir}"/>
+        <mkdir dir="${test.output.dir}"/>
+        <testng outputDir="${test.output.dir}">
+            <classpath>
+                <path refid="project.classpath"/>
+                <pathelement path="${build.classes.dir}"/>
+            </classpath>
+            <xmlfileset dir="${src.etc.dir}">
+                <include name="testsuite-integration-ejb3.xml"/>
+            </xmlfileset>
+        </testng>
+        <echo>Validate the result of the test in ${test.output.dir}!</echo>
+    </target>
+
+    <!-- ################ Hibernate Tools ###################### -->
+
+    <taskdef name="hibernatetool"
+             classname="org.hibernate.tool.ant.HibernateToolTask"
+             classpathref="project.classpath"/>
+
+    <!-- Export the database schema -->
+    <target name="schemaexport" depends="compile, copymetafiles"
+        description="Exports DDL to file in build directory">
+
+        <hibernatetool destdir="${build.dir}">
+            <classpath path="${build.classes.dir}"/>
+            <jpaconfiguration persistenceunit="caveatemptor"/>
+            <hbm2ddl
+                drop="true"
+                create="true"
+                export="false"
+                outputfilename="${proj.shortname}-ddl.sql"
+                delimiter=";"
+                format="true"/>
+        </hibernatetool>
+    </target>
+
+    <!-- ################ HSQL DB ###################### -->
+
+    <!-- Start the HSQL DB server -->
+    <target name="startdb" description="Run HSQL database server with clean DB">
+        <!-- Delete database files -->
+        <delete dir="${database.dir}"/>
+        <java classname="org.hsqldb.Server"
+              fork="yes"
+              classpathref="project.classpath"
+              failonerror="true">
+            <arg value="-database.0"/>
+            <arg value="file:${database.dir}/db"/>
+        </java>
+    </target>
+
+    <!-- Start the HSQL DB browser tool -->
+    <target name="dbmanager" description="Start HSQL DB manager">
+        <java
+            classname="org.hsqldb.util.DatabaseManagerSwing"
+            fork="yes"
+            classpathref="project.classpath"
+            failonerror="true">
+            <arg value="-url"/>
+            <arg value="jdbc:hsqldb:hsql://localhost/"/>
+            <arg value="-driver"/>
+            <arg value="org.hsqldb.jdbcDriver"/>
+        </java>
+    </target>
+
+</project>
